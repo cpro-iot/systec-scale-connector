@@ -1,0 +1,15 @@
+[package]
+name = "scale-connector"
+version = "0.1.0"
+authors = ["Christian Spaniol <christian.spaniol@cpro-iot.com>"]
+edition = "2018"
+
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+clap = { version = "2.33.3" }
+#telnet = { version = "*"}
+#byteorder = {version = "*" }
+#humanize = { version = "*"}
+#ctrlc = { version = "*", features = ["termination"] }
