@@ -9,6 +9,13 @@ edition = "2018"
 
 [dependencies]
 clap = { version = "2.33.3" }
+env_logger = { version = "*" }
+log = { version = "0.4.14" }
+paho-mqtt = { version = "*", default-features = false, features = ['bundled'] }
+serde_json = { version = "1.0" }
+serde = { version = "*", features = ["derive"]}
+#[profile.release]
+#rustflags = ["-C", "target-feature=+crt-static"]
 #telnet = { version = "*"}
 #byteorder = {version = "*" }
 #humanize = { version = "*"}

@@ -2,9 +2,13 @@ use clap::{Arg, App};
 use std::net::{TcpStream};
 use std::io::{Read, Write, self};
 use std::str::from_utf8;
-use std::{thread, time};
+use std::{thread, time, env, process};
 use std::vec::Vec;
+use env_logger;
+use log;
+use serde::{Deserialize, Serialize};
 
+extern crate paho_mqtt as mqtt;
 
 const RESPONSE_SIZE: usize = 64;
 
@@ -31,12 +35,22 @@ fn check_cli<'a>() -> clap::ArgMatches<'a> {
                     .long("interval")
                     .takes_value(true)
                     .help("Refresh interval in milliseconds, defaults to 1000 (1 second)"))
+        .arg(Arg::with_name("log")
+                    .short("l")
+                    .long("log")
+                    .takes_value(true)
+                    .help("Set Log level"))
+        .arg(Arg::with_name("mqtt")
+                    .short("m")
+                    .long("mqtt")
+                    .takes_value(true)
+                    .help("MQTT Server and port, e.g. 192.168.93.97:1500"))
         .get_matches();
     
     return matches;
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 struct ReadResponse {
     error_code: String,
     scale_in_move: String,
@@ -105,17 +119,20 @@ fn read_from_bytes(bytes: &[u8]) -> String {
 }
 
 
-fn run_server(host: String, sleep_time: time::Duration) {
+fn run_server (host: String, sleep_time: time::Duration, maybe_cli: Option<mqtt::Client>) {             
 
     // open tcp socket to host
-    let mut stream: TcpStream = TcpStream::connect(host).expect("Could not connect");    
+    let mut stream: TcpStream = TcpStream::connect(host.to_string()).expect("Could not connect");    
                 
     loop {
+        thread::sleep(sleep_time);
         // data buffer for the response
         let mut data = [0 as u8; RESPONSE_SIZE];
         
-        // command sent to scale, e.g. RM1 read if scale is moving
-        let send = b"<RM1>";                
+        // command sent to scale, e.g. RM1 read if scale is moving        
+        let send = b"<RM1>";  
+        //let send = b"<000226.04.2112:32   71     0.0   154.0  -154.0kg T   1   64819>\r\n";
+        log::debug!("Send command {} to TcpStream", read_from_bytes(send));
         let bytes_written = stream.write(send).unwrap();
 
         // if query is not sent at full-length, raise Error
@@ -124,8 +141,9 @@ fn run_server(host: String, sleep_time: time::Duration) {
         }
         stream.flush().unwrap();
         
-        // read data from tcp stream into buffer
+        // read data from tcp stream into buffer        
         let bytes_read = stream.read(&mut data).unwrap();
+        log::debug!("Read data from stream: {}", read_from_bytes(&data));
 
         // read vector with the bytes read from stream
         let mut received: Vec<u8> = vec![];
@@ -133,9 +151,9 @@ fn run_server(host: String, sleep_time: time::Duration) {
                 
         // response is too short, dump to cli and skip this loop iteration
         if bytes_read < 64 {
-            println!("Bytes read: {}, so response is non-valid, dump is: {}", bytes_read, read_from_bytes(&data));
+            log::warn!("Bytes read: {}, so response is non-valid, dump is: {}", bytes_read, read_from_bytes(&data));            
             continue;
-        } 
+        }       
         
         if bytes_read == 64 {
             // Remove the *** linefeed from stream because it *** the entire ***
@@ -145,17 +163,40 @@ fn run_server(host: String, sleep_time: time::Duration) {
             
             // parse response into struct
             let response = ReadResponse::from_reader(received).unwrap();
-            println!("{:?}", response);            
+
+            if let Some(cli) =  &maybe_cli {
+                emit_response(&cli, host.to_string(), &response);
+            }
+            log::info!("{:?}", &response);            
         }
-        thread::sleep(sleep_time);
+        
+          
+    }
+}
+
+fn emit_response(cli: &mqtt::Client, host: String, response: &ReadResponse) {
+
+    let json_response = serde_json::to_string(&response).unwrap();
+
+    let msg = mqtt::MessageBuilder::new()
+        .topic(host)
+        .payload(json_response)
+        .qos(1)
+        .finalize();
+    
+    if let Err(e) = cli.publish(msg) {
+       log::error!("Error sending message: {:?}", e);
     }
 }
 
 fn main() {
+
     // Set command line parameters
     let matches = check_cli();
+
+    
     let ip = matches.value_of("ip").unwrap_or("localhost");
-    let port = matches.value_of("port").unwrap_or("1234");
+    let port = matches.value_of("port").unwrap_or("1234");    
 
     // create hostname 
     let host = format!("{}:{}", ip, port);
@@ -163,8 +204,38 @@ fn main() {
     // refresh interval in milliseconds
     let sleep: u64 = matches.value_of("interval").unwrap_or("1000").to_string().parse::<u64>().expect("Wrong refresh parameter, try integer value - e.g. \"1000\"");
     let sleep_time = time::Duration::from_millis(sleep);
+
+    // get mqtt parameter
+    let mqtt_url = matches.value_of("mqtt").unwrap_or("false").to_string();//.expect("Error with MQTT parameter");
+
     
+    env::set_var("RUST_LOG", matches.value_of("log").unwrap_or("info"));
+    env_logger::init();
+
     // run forever
-    run_server(host, sleep_time);        
+    if mqtt_url == "false" {
+        log::info!("Establish connection without MQTT emission");
+        run_server(host.to_string(), sleep_time, None);        
+    } else {
+        log::info!("Connect MQTT Emitter to broker at {}", mqtt_url);
+        let cli = mqtt::Client::new(mqtt_url).unwrap_or_else(|err| { log::error!("Error creating the client: {:?}", err); process::exit(1)});
+    
+        let conn_opts = mqtt::ConnectOptionsBuilder::new()
+            .keep_alive_interval(time::Duration::from_secs(30))
+            .connect_timeout(time::Duration::from_secs(25))
+            .clean_session(true)
+            .finalize();
+    
+        if let Err(e) = cli.connect(conn_opts) {
+            log::error!("Unable to connect: {:?}", e);
+            process::exit(1);
+        }
+    
+        run_server(host.to_string(), sleep_time, Some(cli));        
+    }
+
+
+    log::info!("Open Stream to Host: {} Refresh rate: {} ms", host, sleep);
+
     
 }
