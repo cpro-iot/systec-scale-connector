@@ -31,9 +31,3 @@ In order to set up the scale stack, first run the build script:
 This generates a docker-compose file that generates a stack that connects to all available scales in the network and gathers the data at the MQTT broker (service `mqtt-broker` for that matter).
 
 `docker-compose -f auto-compose.yml up -d`
-
-For more information on how to configure the scale connector, look at the Cpro Git
-
-## Questions?
-
-`<christian.spaniol@cpro-iot.com>`
