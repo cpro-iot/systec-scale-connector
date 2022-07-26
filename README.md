@@ -1,8 +1,10 @@
 # Cpro IoT Connector for SysTec Scales 0.1.4
 
+## Binary client
+
 Connect to scales to retrieve live data
 
-```
+```sh
 USAGE:
     scale-connector [OPTIONS] <ip>
 
@@ -20,5 +22,18 @@ ARGS:
     <ip>    Hostname or IP Address
 ```
 
-# Questions?
+## Scale Connector Stack
+
+In order to set up the scale stack, first run the build script:
+
+`build_scale_compose_from_network.sh > auto-compose.yml`
+
+This generates a docker-compose file that generates a stack that connects to all available scales in the network and gathers the data at the MQTT broker (service `mqtt-broker` for that matter).
+
+`docker-compose -f auto-compose.yml up -d`
+
+For more information on how to configure the scale connector, look at the Cpro Git
+
+## Questions?
+
 `<christian.spaniol@cpro-iot.com>`

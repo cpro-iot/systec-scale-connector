@@ -1,0 +1,24 @@
+version: '3.4'
+
+x-function:
+  image: <<<REPLACE WITH SCALE-CONNECTOR-IMAGE>>
+  depends_on:
+    mqtt-broker:
+      condition: service_healthy
+
+networks:
+  default:
+    external:
+      name: twx_default
+
+services:
+  mqtt-broker:
+    image: hivemq/hivemq4
+    container_name: mqtt-broker
+    ports:
+      - "4713:8080"
+      - "1883:1883"
+    restart: unless-stopped
+    healthcheck:
+      test: curl -s -w '%{http_code}' -o /dev/stderr localhost:8080 | grep -w 200
+      interval: 10s

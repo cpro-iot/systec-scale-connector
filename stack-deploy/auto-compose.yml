@@ -1,0 +1,132 @@
+version: '3.4'
+## this is an output example for the build scripts
+
+
+x-function:
+  image: <<<REPLACE WITH SCALE-CONNECTOR-IMAGE>>
+  depends_on:
+    mqtt-broker:
+      condition: service_healthy
+
+
+services:
+  mqtt-broker:
+    image: hivemq/hivemq4
+    container_name: mqtt-broker
+    ports:
+      - "4713:8080"
+      - "1883:1883"
+    restart: unless-stopped
+    healthcheck:
+      test: curl -s -w '%{http_code}' -o /dev/stderr localhost:8080 | grep -w 200
+      interval: 10s
+  scale_224:
+    <<: *function
+    container_name: scale_224
+    environment:
+      HOST: 192.168.90.224
+  scale_206:
+    <<: *function
+    container_name: scale_206
+    environment:
+      HOST: 192.168.90.206
+  scale_208:
+    <<: *function
+    container_name: scale_208
+    environment:
+      HOST: 192.168.90.208
+  scale_220:
+    <<: *function
+    container_name: scale_220
+    environment:
+      HOST: 192.168.90.220
+  scale_225:
+    <<: *function
+    container_name: scale_225
+    environment:
+      HOST: 192.168.90.225
+  scale_207:
+    <<: *function
+    container_name: scale_207
+    environment:
+      HOST: 192.168.90.207
+  scale_209:
+    <<: *function
+    container_name: scale_209
+    environment:
+      HOST: 192.168.90.209
+  scale_219:
+    <<: *function
+    container_name: scale_219
+    environment:
+      HOST: 192.168.90.219
+  scale_221:
+    <<: *function
+    container_name: scale_221
+    environment:
+      HOST: 192.168.90.221
+  scale_202:
+    <<: *function
+    container_name: scale_202
+    environment:
+      HOST: 192.168.90.202
+  scale_204:
+    <<: *function
+    container_name: scale_204
+    environment:
+      HOST: 192.168.90.204
+  scale_214:
+    <<: *function
+    container_name: scale_214
+    environment:
+      HOST: 192.168.90.214
+  scale_216:
+    <<: *function
+    container_name: scale_216
+    environment:
+      HOST: 192.168.90.216
+  scale_205:
+    <<: *function
+    container_name: scale_205
+    environment:
+      HOST: 192.168.90.205
+  scale_215:
+    <<: *function
+    container_name: scale_215
+    environment:
+      HOST: 192.168.90.215
+  scale_226:
+    <<: *function
+    container_name: scale_226
+    environment:
+      HOST: 192.168.90.226
+  scale_210:
+    <<: *function
+    container_name: scale_210
+    environment:
+      HOST: 192.168.90.210
+  scale_222:
+    <<: *function
+    container_name: scale_222
+    environment:
+      HOST: 192.168.90.222
+  scale_227:
+    <<: *function
+    container_name: scale_227
+    environment:
+      HOST: 192.168.90.227
+  scale_201:
+    <<: *function
+    container_name: scale_201
+    environment:
+      HOST: 192.168.90.201
+  scale_213:
+    <<: *function
+    container_name: scale_213
+    environment:
+      HOST: 192.168.90.213
+  scale_223:
+    <<: *function
+    container_name: scale_223
+    environment:
+      HOST: 192.168.90.223

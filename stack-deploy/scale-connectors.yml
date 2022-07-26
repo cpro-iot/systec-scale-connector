@@ -1,0 +1,43 @@
+version: '2.2'
+
+services:
+  mqtt-broker:
+    image: hivemq/hivemq4
+    container_name: mqtt-broker
+    ports:
+      - "4713:8080"
+      - "1883:1883"
+    restart: unless-stopped
+    healthcheck:
+      test: curl -s -w '%{http_code}' -o /dev/stderr localhost:8080 | grep -w 200
+      interval: 10s
+
+  scale_208:
+    image: docker.cpronect.de/scale-connector
+    container_name: scale_208
+    depends_on:
+      mqtt-broker:
+        condition: service_healthy
+    environment:
+      HOST: 192.168.90.208
+      MQTT: mqtt-broker:1883
+      LOG: scale_connector=trace
+      INTERVAL: 10000
+        
+  scale_209:
+    image: docker.cpronect.de/scale-connector
+    container_name: scale_209
+    depends_on:
+      mqtt-broker:
+        condition: service_healthy
+    environment:
+      HOST: 192.168.90.209
+      MQTT: mqtt-broker:1883
+      LOG: scale_connector=trace
+      INTERVAL: 10000
+
+networks:
+  default:
+    external:
+      name: twx_default
+
