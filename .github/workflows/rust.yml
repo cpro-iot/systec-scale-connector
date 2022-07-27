@@ -19,6 +19,6 @@ jobs:
       
     - name: Build
       run: cargo build --verbose
-      working-directory: scale-connector
+      working-directory: scale-client
 #    - name: Run tests
 #      run: cargo test --verbose
